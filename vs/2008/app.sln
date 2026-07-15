@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "app", "app.vcproj", "{C7A37A12-DAC1-4574-9652-43A882917D69}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3BAB36A9-88C9-47FD-860A-8E1AC9182198} = {3BAB36A9-88C9-47FD-860A-8E1AC9182198}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "app_lib", "lib.vcproj", "{3BAB36A9-88C9-47FD-860A-8E1AC9182198}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C7A37A12-DAC1-4574-9652-43A882917D69}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C7A37A12-DAC1-4574-9652-43A882917D69}.Debug|Win32.Build.0 = Debug|Win32
+		{C7A37A12-DAC1-4574-9652-43A882917D69}.Release|Win32.ActiveCfg = Release|Win32
+		{C7A37A12-DAC1-4574-9652-43A882917D69}.Release|Win32.Build.0 = Release|Win32
+		{3BAB36A9-88C9-47FD-860A-8E1AC9182198}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3BAB36A9-88C9-47FD-860A-8E1AC9182198}.Debug|Win32.Build.0 = Debug|Win32
+		{3BAB36A9-88C9-47FD-860A-8E1AC9182198}.Release|Win32.ActiveCfg = Release|Win32
+		{3BAB36A9-88C9-47FD-860A-8E1AC9182198}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

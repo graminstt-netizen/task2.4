@@ -1,0 +1,33 @@
+# объектные файлы
+*.o
+*.obj
+*.d
+*.gch
+*.pch
+
+# Статические и динамические либы
+*.lib
+*.a
+*.la
+*.lo
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# ехе файлы
+*.exe
+
+#Папки
+.vscode/
+.qodo
+build/
+Testing/
+
+#тхт
+input.txt
+output.txt
+input.bin
+output.bin
+large_input.txt
+large_output.txt
