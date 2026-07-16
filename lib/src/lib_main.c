@@ -1,5 +1,6 @@
 /*
-lib_main.c - реализация функций библиотеки 
+Разработка генератора случайных паролей (Вариант 2.4)
+Описание файла: Реализация парсера аргументов и алгоритма генерации паролей.
 
 Бабурин Дмитрий Сергеевич
 МК-101
@@ -9,13 +10,14 @@ lib_main.c - реализация функций библиотеки
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
-// Вспомогательная функция: проверка, является ли символ разделителем
+// Вспомогательная функция: проверяем является ли символ разделителем
 static int is_delimiter(char c, const char *delims) {
     return strchr(delims, c) != NULL;
 }
 
-// Вспомогательная функция: проверка, является ли строка корректным числом
+// Вспомогательная функция: проверяем является ли строка числом
 static int is_number(const char *str) {
     if (str == NULL || *str == '\0') return 0;
     for (int i = 0; str[i] != '\0'; i++) {
@@ -35,7 +37,7 @@ static int validate_classes(const char *val) {
         }
         counts[(unsigned char)c]++;
         if (counts[(unsigned char)c] > 1) {
-            return 0; // Символ дублируется
+            return 0; // Обнаружен дубликат
         }
     }
     return 1;
@@ -58,6 +60,31 @@ static void replace_delimiters(char *delims, char sym) {
     delims[1] = '\0';
 }
 
+// Вспомогательная функция извлечения значения для опции.
+// Обрабатывает три стиля: слитно (-minl10), через разделитель (-minl:10), через пробел (-minl 10).
+static const char* extract_value(const char *arg, const char *opt, const char *delims, int *used_next, const char *next_arg) {
+    size_t opt_len = strlen(opt);
+    if (strncmp(arg, opt, opt_len) != 0) {
+        return NULL; // Аргумент не начинается с этой опции
+    }
+    
+    const char *rest = arg + opt_len;
+    *used_next = 0;
+    
+    if (strlen(rest) == 0) {
+        if (next_arg == NULL) {
+            return ""; // Значение отсутствует
+        }
+        *used_next = 1;
+        return next_arg;
+    }
+    
+    if (is_delimiter(rest[0], delims)) {
+        return rest + 1;
+    }
+    
+    return rest;
+}
 
 // Инициализация структуры дефолтными значениями
 void init_config(PasswordConfig *config) {
@@ -65,10 +92,9 @@ void init_config(PasswordConfig *config) {
     config->max_len = -1;
     config->fixed_len = -1;
     config->count = 1; // По умолчанию генерируем 1 пароль
-    
     config->alphabet[0] = '\0';
     
-    // Стандартные разделители по умолчанию: '=' и ':'
+    // Начальные разделители: '=' и ':'
     strcpy(config->delimiters, "=:");
     
     config->has_min_len = 0;
@@ -81,45 +107,14 @@ void init_config(PasswordConfig *config) {
     config->has_m2 = 0;
 }
 
-
-// Вспомогательная функция извлечения значения для опции.
-// Обрабатывает три стиля: слитно (-minl10), через разделитель (-minl:10), через пробел (-minl 10).
-static const char* extract_value(const char *arg, const char *opt, const char *delims, int *used_next, const char *next_arg) {
-    size_t opt_len = strlen(opt);
-    if (strncmp(arg, opt, opt_len) != 0) {
-        return NULL; // Аргумент не начинается с имени этой опции
-    }
-    
-    const char *rest = arg + opt_len;
-    *used_next = 0;
-    
-    // Если после имени опции ничего нет, значение должно быть в следующем аргументе (через пробел)
-    if (strlen(rest) == 0) {
-        if (next_arg == NULL) {
-            return ""; // Значение отсутствует (пустая строка для обработки ошибки выше)
-        }
-        *used_next = 1;
-        return next_arg;
-    }
-    
-    // Если первый символ остатка — это активный разделитель, значение идет после него
-    if (is_delimiter(rest[0], delims)) {
-        return rest + 1;
-    }
-    
-    // Иначе значение прикреплено слитно (-minl10)
-    return rest;
-}
-
 // Парсинг аргументов командной строки
 int parse_arguments(int argc, char **argv, PasswordConfig *config) {
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         const char *next_arg = (i + 1 < argc) ? argv[i + 1] : NULL;
         int used_next = 0;
-        int matched = 0;
         
-        // Обработка -minl
+        // 1. Обработка -minl
         const char *val = extract_value(arg, "-minl", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (config->has_min_len) {
@@ -140,7 +135,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -maxl
+        // 2. Обработка -maxl
         val = extract_value(arg, "-maxl", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (config->has_max_len) {
@@ -161,7 +156,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -n
+        // 3. Обработка -n
         val = extract_value(arg, "-n", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (config->has_fixed_len) {
@@ -182,7 +177,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -c
+        // 4. Обработка -c
         val = extract_value(arg, "-c", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (config->has_count) {
@@ -203,7 +198,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -a
+        // 5. Обработка -a
         val = extract_value(arg, "-a", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (config->has_alphabet) {
@@ -221,7 +216,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -C
+        // 6. Обработка -C
         val = extract_value(arg, "-C", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (config->has_classes) {
@@ -236,7 +231,6 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 fprintf(stderr, "Error: Option -C expects unique characters from {a, A, D, S}\n");
                 return 1;
             }
-            // Временно сохраняем строку классов прямо в alphabet (позже раскроем в полный алфавит)
             strncpy(config->alphabet, val, MAX_ALPHABET_SIZE - 1);
             config->alphabet[MAX_ALPHABET_SIZE - 1] = '\0';
             config->has_classes = 1;
@@ -244,7 +238,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -d (добавить разделитель)
+        // 7. Обработка -d
         val = extract_value(arg, "-d", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (strlen(val) == 0) {
@@ -256,7 +250,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -D (заменить разделители)
+        // 8. Обработка -D
         val = extract_value(arg, "-D", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             if (strlen(val) == 0) {
@@ -268,11 +262,10 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -m1
+        // 9. Обработка -m1
         val = extract_value(arg, "-m1", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             config->has_m1 = 1;
-            // У -m1 нет значения, но если used_next сработал, вернем ошибку (опция флаговая)
             if (used_next) {
                 fprintf(stderr, "Error: Option -m1 does not take a separate value\n");
                 return 1;
@@ -280,7 +273,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             continue;
         }
         
-        // Обработка -m2
+        // 10. Обработка -m2
         val = extract_value(arg, "-m2", config->delimiters, &used_next, next_arg);
         if (val != NULL) {
             config->has_m2 = 1;
@@ -290,45 +283,34 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
             }
             continue;
         }
-        
-        // Если аргумент начинается с дефиса, но не подошел ни под одну нашу опцию — мы его игнорируем!
-        // Это соответствует правилу: "Могут встречаться другие опции, которые следует игнорировать."
     }
     
-
-    // Пост-валидация и проверки совместимости
-    
-    // Проверка несовместимости -a и -C
+    // Проверки совместимости
     if (config->has_alphabet && config->has_classes) {
         fprintf(stderr, "Error: Options -a and -C are mutually exclusive\n");
         return 1;
     }
     
-    // Проверка зависимости -m1 и -m2
     if (config->has_m1 && !config->has_m2) {
         fprintf(stderr, "Error: Option -m1 requires option -m2\n");
         return 1;
     }
     
-    // Проверка несовместимости -m1, -m2 и -n
     if ((config->has_m1 || config->has_m2) && config->has_fixed_len) {
         fprintf(stderr, "Error: Options -m1/-m2 and -n are mutually exclusive\n");
         return 1;
     }
     
-    // Проверка несовместимости диапазона длин (-minl/-maxl) и фиксированной длины (-n)
     if ((config->has_min_len || config->has_max_len) && config->has_fixed_len) {
         fprintf(stderr, "Error: Options -minl/-maxl and -n are mutually exclusive\n");
         return 1;
     }
     
-    // Проверка, что если задана -minl, то задана и -maxl (и наоборот)
     if (config->has_min_len != config->has_max_len) {
         fprintf(stderr, "Error: Both -minl and -maxl must be specified together\n");
         return 1;
     }
     
-    // Если заданы диапазоны длин, проверяем корректность
     if (config->has_min_len && config->has_max_len) {
         if (config->min_len <= 0 || config->max_len <= 0) {
             fprintf(stderr, "Error: Password lengths must be positive numbers\n");
@@ -340,22 +322,76 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
         }
     }
     
-    // Проверка фиксированной длины
     if (config->has_fixed_len && config->fixed_len <= 0) {
         fprintf(stderr, "Error: Fixed password length (-n) must be a positive number\n");
         return 1;
     }
     
-    // Проверка количества паролей
     if (config->count <= 0) {
         fprintf(stderr, "Error: Number of passwords (-c) must be positive\n");
         return 1;
     }
     
-    return 0; // Все проверки успешно пройдены!
+    return 0;
 }
 
-// Заглушка для функции генерации (реализуем на следующем шаге)
+// Генерация случайных паролей на основе собранной конфигурации
 void generate_passwords(const PasswordConfig *config) {
-    (void)config;
+    char pool[1024] = {0};
+    
+    // Формируем алфавит
+    if (config->has_alphabet) {
+        // Если задан конкретный пользовательский алфавит
+        strcpy(pool, config->alphabet);
+    } else if (config->has_classes) {
+        // Если заданы классы символов a, A, D, S
+        for (int i = 0; config->alphabet[i] != '\0'; i++) {
+            char c = config->alphabet[i];
+            if (c == 'a') {
+                strcat(pool, "abcdefghijklmnopqrstuvwxyz");
+            } else if (c == 'A') {
+                strcat(pool, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+            } else if (c == 'D') {
+                strcat(pool, "0123456789");
+            } else if (c == 'S') {
+                strcat(pool, "!@#$%^&*()-_=+[]{}|;:,.<>/?");
+            }
+        }
+    } else {
+        // Дефолтный алфавит символов (строчные буквы + цифры), если ничего не передали
+        strcpy(pool, "abcdefghijklmnopqrstuvwxyz0123456789");
+    }
+    
+    int pool_size = (int)strlen(pool);
+    if (pool_size == 0) {
+        return;
+    }
+    
+    // Инициализация генератора случайных чисел один раз за запуск программы
+    static int seeded = 0;
+    if (!seeded) {
+        srand((unsigned int)time(NULL));
+        seeded = 1;
+    }
+    
+    // Задаем базовую длину, если параметры длины не передавались вовсе
+    int base_len = 10;
+    if (config->has_fixed_len) {
+        base_len = config->fixed_len;
+    }
+    
+    // Генерируем указанное количество паролей
+    for (int c_idx = 0; c_idx < config->count; c_idx++) {
+        int current_len = base_len;
+        
+        // Если задан интервал minl - maxl, выбираем случайную длину в этом диапазоне
+        if (config->has_min_len && config->has_max_len) {
+            current_len = config->min_len + rand() % (config->max_len - config->min_len + 1);
+        }
+        
+        for (int char_idx = 0; char_idx < current_len; char_idx++) {
+            putchar(pool[rand() % pool_size]);
+        }
+        putchar('\n');
+    }
 }
