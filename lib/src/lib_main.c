@@ -1,6 +1,6 @@
 /*
-Разработка генератора случайных паролей
-Описание файла: Реализация парсера аргументов и алгоритма генерации паролей.
+Разработка генератора случайных паролей (Вариант 2.4)
+Описание файла: Реализация парсера аргументов и алгоритма генерации паролей (с валидацией разделителей).
 
 Бабурин Дмитрий Сергеевич
 МК-101
@@ -61,7 +61,6 @@ static void replace_delimiters(char *delims, char sym) {
 }
 
 // Вспомогательная функция извлечения значения для опции.
-// Обрабатывает три стиля: слитно (-minl10), через разделитель (-minl:10), через пробел (-minl 10).
 static const char* extract_value(const char *arg, const char *opt, const char *delims, int *used_next, const char *next_arg) {
     size_t opt_len = strlen(opt);
     if (strncmp(arg, opt, opt_len) != 0) {
@@ -86,13 +85,11 @@ static const char* extract_value(const char *arg, const char *opt, const char *d
     return rest;
 }
 
-// Вспомогательная функция для сборки пула доступных символов (Рефакторинг)
+// Вспомогательная функция для сборки пула доступных символов
 static void build_char_pool(const PasswordConfig *config, char *pool) {
     if (config->has_alphabet) {
-        // Если задан конкретный пользовательский алфавит
         strcpy(pool, config->alphabet);
     } else if (config->has_classes) {
-        // Если заданы классы символов a, A, D, S
         for (int i = 0; config->alphabet[i] != '\0'; i++) {
             char c = config->alphabet[i];
             if (c == 'a') {
@@ -106,7 +103,6 @@ static void build_char_pool(const PasswordConfig *config, char *pool) {
             }
         }
     } else {
-        // Дефолтный алфавит символов (строчные буквы + цифры), если ничего не передали
         strcpy(pool, "abcdefghijklmnopqrstuvwxyz0123456789");
     }
 }
@@ -270,7 +266,14 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 fprintf(stderr, "Error: Missing value for -d\n");
                 return 1;
             }
-            add_delimiter(config->delimiters, val[0]);
+            // ЗАЩИТА: Не разрешаем использовать буквы, цифры и дефис как разделители
+            char sym = val[0];
+            if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || 
+                (sym >= '0' && sym <= '9') || sym == '-') {
+                fprintf(stderr, "Error: Delimiter cannot be alphanumeric or a hyphen\n");
+                return 1;
+            }
+            add_delimiter(config->delimiters, sym);
             if (used_next) i++;
             continue;
         }
@@ -282,7 +285,14 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 fprintf(stderr, "Error: Missing value for -D\n");
                 return 1;
             }
-            replace_delimiters(config->delimiters, val[0]);
+            // ЗАЩИТА: Не разрешаем использовать буквы, цифры и дефис как разделители
+            char sym = val[0];
+            if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || 
+                (sym >= '0' && sym <= '9') || sym == '-') {
+                fprintf(stderr, "Error: Delimiter cannot be alphanumeric or a hyphen\n");
+                return 1;
+            }
+            replace_delimiters(config->delimiters, sym);
             if (used_next) i++;
             continue;
         }
@@ -364,7 +374,6 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
 void generate_passwords(const PasswordConfig *config) {
     char pool[1024] = {0};
     
-    // Вызываем вспомогательную функцию для сборки пула (Рефакторинг)
     build_char_pool(config, pool);
     
     int pool_size = (int)strlen(pool);
@@ -372,24 +381,20 @@ void generate_passwords(const PasswordConfig *config) {
         return;
     }
     
-    // Инициализация генератора случайных чисел один раз за запуск программы
     static int seeded = 0;
     if (!seeded) {
         srand((unsigned int)time(NULL));
         seeded = 1;
     }
     
-    // Задаем базовую длину, если параметры длины не передавались вовсе
     int base_len = 10;
     if (config->has_fixed_len) {
         base_len = config->fixed_len;
     }
     
-    // Генерируем указанное количество паролей
     for (int c_idx = 0; c_idx < config->count; c_idx++) {
         int current_len = base_len;
         
-        // Если задан интервал minl - maxl, выбираем случайную длину в этом диапазоне
         if (config->has_min_len && config->has_max_len) {
             current_len = config->min_len + rand() % (config->max_len - config->min_len + 1);
         }
