@@ -1,6 +1,6 @@
 /*
 Разработка генератора случайных паролей (Вариант 2.4)
-Описание файла: Реализация парсера аргументов и алгоритма генерации паролей (с валидацией разделителей).
+Описание файла: Финальная реализация парсера аргументов и алгоритма генерации паролей (с полировкой ошибок).
 
 Бабурин Дмитрий Сергеевич
 МК-101
@@ -112,10 +112,8 @@ void init_config(PasswordConfig *config) {
     config->min_len = -1;
     config->max_len = -1;
     config->fixed_len = -1;
-    config->count = 1; // По умолчанию генерируем 1 пароль
+    config->count = 1;
     config->alphabet[0] = '\0';
-    
-    // Начальные разделители: '=' и ':'
     strcpy(config->delimiters, "=:");
     
     config->has_min_len = 0;
@@ -147,7 +145,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 return 1;
             }
             if (!is_number(val)) {
-                fprintf(stderr, "Error: Option -minl expects a numeric value\n");
+                fprintf(stderr, "Error: Option -minl expects a numeric value, got '%s'\n", val);
                 return 1;
             }
             config->min_len = atoi(val);
@@ -168,7 +166,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 return 1;
             }
             if (!is_number(val)) {
-                fprintf(stderr, "Error: Option -maxl expects a numeric value\n");
+                fprintf(stderr, "Error: Option -maxl expects a numeric value, got '%s'\n", val);
                 return 1;
             }
             config->max_len = atoi(val);
@@ -189,7 +187,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 return 1;
             }
             if (!is_number(val)) {
-                fprintf(stderr, "Error: Option -n expects a numeric value\n");
+                fprintf(stderr, "Error: Option -n expects a numeric value, got '%s'\n", val);
                 return 1;
             }
             config->fixed_len = atoi(val);
@@ -210,7 +208,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 return 1;
             }
             if (!is_number(val)) {
-                fprintf(stderr, "Error: Option -c expects a numeric value\n");
+                fprintf(stderr, "Error: Option -c expects a numeric value, got '%s'\n", val);
                 return 1;
             }
             config->count = atoi(val);
@@ -249,7 +247,7 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 return 1;
             }
             if (!validate_classes(val)) {
-                fprintf(stderr, "Error: Option -C expects unique characters from {a, A, D, S}\n");
+                fprintf(stderr, "Error: Option -C expects unique characters from {a, A, D, S}, got '%s'\n", val);
                 return 1;
             }
             strncpy(config->alphabet, val, MAX_ALPHABET_SIZE - 1);
@@ -266,7 +264,6 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 fprintf(stderr, "Error: Missing value for -d\n");
                 return 1;
             }
-            // ЗАЩИТА: Не разрешаем использовать буквы, цифры и дефис как разделители
             char sym = val[0];
             if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || 
                 (sym >= '0' && sym <= '9') || sym == '-') {
@@ -285,7 +282,6 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 fprintf(stderr, "Error: Missing value for -D\n");
                 return 1;
             }
-            // ЗАЩИТА: Не разрешаем использовать буквы, цифры и дефис как разделители
             char sym = val[0];
             if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || 
                 (sym >= '0' && sym <= '9') || sym == '-') {
