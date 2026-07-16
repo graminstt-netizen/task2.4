@@ -1,5 +1,5 @@
 /*
-Разработка генератора случайных паролей (Вариант 2.4)
+Разработка генератора случайных паролей
 Описание файла: Реализация парсера аргументов и алгоритма генерации паролей.
 
 Бабурин Дмитрий Сергеевич
@@ -84,6 +84,31 @@ static const char* extract_value(const char *arg, const char *opt, const char *d
     }
     
     return rest;
+}
+
+// Вспомогательная функция для сборки пула доступных символов (Рефакторинг)
+static void build_char_pool(const PasswordConfig *config, char *pool) {
+    if (config->has_alphabet) {
+        // Если задан конкретный пользовательский алфавит
+        strcpy(pool, config->alphabet);
+    } else if (config->has_classes) {
+        // Если заданы классы символов a, A, D, S
+        for (int i = 0; config->alphabet[i] != '\0'; i++) {
+            char c = config->alphabet[i];
+            if (c == 'a') {
+                strcat(pool, "abcdefghijklmnopqrstuvwxyz");
+            } else if (c == 'A') {
+                strcat(pool, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+            } else if (c == 'D') {
+                strcat(pool, "0123456789");
+            } else if (c == 'S') {
+                strcat(pool, "!@#$%^&*()-_=+[]{}|;:,.<>/?");
+            }
+        }
+    } else {
+        // Дефолтный алфавит символов (строчные буквы + цифры), если ничего не передали
+        strcpy(pool, "abcdefghijklmnopqrstuvwxyz0123456789");
+    }
 }
 
 // Инициализация структуры дефолтными значениями
@@ -339,28 +364,8 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
 void generate_passwords(const PasswordConfig *config) {
     char pool[1024] = {0};
     
-    // Формируем алфавит
-    if (config->has_alphabet) {
-        // Если задан конкретный пользовательский алфавит
-        strcpy(pool, config->alphabet);
-    } else if (config->has_classes) {
-        // Если заданы классы символов a, A, D, S
-        for (int i = 0; config->alphabet[i] != '\0'; i++) {
-            char c = config->alphabet[i];
-            if (c == 'a') {
-                strcat(pool, "abcdefghijklmnopqrstuvwxyz");
-            } else if (c == 'A') {
-                strcat(pool, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-            } else if (c == 'D') {
-                strcat(pool, "0123456789");
-            } else if (c == 'S') {
-                strcat(pool, "!@#$%^&*()-_=+[]{}|;:,.<>/?");
-            }
-        }
-    } else {
-        // Дефолтный алфавит символов (строчные буквы + цифры), если ничего не передали
-        strcpy(pool, "abcdefghijklmnopqrstuvwxyz0123456789");
-    }
+    // Вызываем вспомогательную функцию для сборки пула (Рефакторинг)
+    build_char_pool(config, pool);
     
     int pool_size = (int)strlen(pool);
     if (pool_size == 0) {
