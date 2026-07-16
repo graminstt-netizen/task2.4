@@ -264,10 +264,10 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 fprintf(stderr, "Error: Missing value for -d\n");
                 return 1;
             }
+            // Блокируем только буквы и цифры (дефис разрешаем!)
             char sym = val[0];
-            if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || 
-                (sym >= '0' && sym <= '9') || sym == '-') {
-                fprintf(stderr, "Error: Delimiter cannot be alphanumeric or a hyphen\n");
+            if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || (sym >= '0' && sym <= '9')) {
+                fprintf(stderr, "Error: Delimiter cannot be alphanumeric\n");
                 return 1;
             }
             add_delimiter(config->delimiters, sym);
@@ -282,10 +282,10 @@ int parse_arguments(int argc, char **argv, PasswordConfig *config) {
                 fprintf(stderr, "Error: Missing value for -D\n");
                 return 1;
             }
+            // Блокируем только буквы и цифры (дефис разрешаем!)
             char sym = val[0];
-            if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || 
-                (sym >= '0' && sym <= '9') || sym == '-') {
-                fprintf(stderr, "Error: Delimiter cannot be alphanumeric or a hyphen\n");
+            if ((sym >= 'a' && sym <= 'z') || (sym >= 'A' && sym <= 'Z') || (sym >= '0' && sym <= '9')) {
+                fprintf(stderr, "Error: Delimiter cannot be alphanumeric\n");
                 return 1;
             }
             replace_delimiters(config->delimiters, sym);
